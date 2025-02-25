@@ -8,7 +8,7 @@ using {
 using plan.db as plan from './plan';
 
 entity Investments : cuid, managed {
-  type     : plan.PlanType;
+  plan     : Association to one plan.Plans;
   status   : plan.Status;
   comments : String;
 }

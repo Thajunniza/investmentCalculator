@@ -1,7 +1,7 @@
 _schema-version: 3.3.0
 ID: investmentCalculator
 version: 1.0.0
-description: "A simple CAP project."
+description: "Investment Calculator."
 parameters:
   enable-parallel-deployments: true
   deploy_mode: html5-repo
@@ -27,6 +27,7 @@ modules:
           srv-url: ${default-url}
     requires:
       - name: investmentCalculator-db
+      - name: investmentCalculator-auth
 
   - name: investmentCalculator-db-deployer
     type: hdb
@@ -36,16 +37,6 @@ modules:
     requires:
       - name: investmentCalculator-db
 
-  - name: investmentCalculator-app-deployer
-    type: com.sap.application.content
-    path: gen
-    requires:
-      - name: investmentCalculator-html5-repo-host
-        parameters:
-          content-target: true
-    build-parameters:
-      build-result: app/
-      requires:
 
 
 resources:
@@ -59,3 +50,12 @@ resources:
     parameters:
       service: html5-apps-repo
       service-plan: app-host
+  - name: investmentCalculator-auth
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: xsuaa
+      service-plan: application
+      path: ./xs-security.json
+      config:
+        xsappname: investmentCalculator-auth
+        tenant-mode: dedicated

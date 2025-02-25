@@ -17,3 +17,10 @@ type Status   : String(50) enum {
   inprogress = 'INPROG';
   completed  = 'COMPLETED';
 }
+
+
+entity Plans : managed {
+  key ID   : String(20);
+      name : String(50);
+      desc : String;
+}
