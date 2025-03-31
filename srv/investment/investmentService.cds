@@ -5,5 +5,6 @@ service InvestmentService {
     @odata.draft.enabled
     entity Investments as projection on investment.Investments;
     entity Plans as projection on plan.Plans;
+    function getEmbeddings(input:String) returns String;
 }
 
