@@ -4,7 +4,11 @@
   "description": "A simple CAP project.",
   "main": "index.js",
   "scripts": {
-    "start": "cds-serve"
+    "start": "cds-serve",
+    "watch-manageplans": "cds watch --open manageplans/webapp/index.html?sap-ui-xx-viewCache=false",
+    "undeploy": "cf undeploy investmentCalculator --delete-services --delete-service-keys --delete-service-brokers",
+    "build": "rimraf resources mta_archives && mbt build --mtar archive",
+    "deploy": "cf deploy mta_archives/archive.mtar --retries 1"
   },
   "devDependencies": {
     "babel-cli": "^6.9.0",
@@ -21,7 +25,9 @@
     "watchd": "github:mklabs/watchd",
     "@cap-js/cds-types": "^0.8.0",
     "@cap-js/sqlite": "^1",
-    "@sap/cds-dk": "^8"
+    "@sap/cds-dk": "^8",
+    "rimraf": "^5.0.5",
+    "mbt": "^1.2.29"
   },
   "bake": {
     "description": "Scaffold a basic ES6 setup",
@@ -54,5 +60,8 @@
         "db": "hana"
       }
     }
-  }
+  },
+  "sapux": [
+    "app/manageplans"
+  ]
 }

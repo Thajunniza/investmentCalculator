@@ -1,61 +1,153 @@
 _schema-version: 3.3.0
 ID: investmentCalculator
+description: Investment Calculator.
 version: 1.0.0
-description: "Investment Calculator."
+modules:
+  # ------------------------- DB DEPLOYER MODULE ---------------
+  - name: investmentCalculator-db-deployer
+  # ------------------------------------------------------------
+    type: hdb
+    path: gen/db
+    requires:
+      - name: investmentCalculator-db
+    parameters:
+      buildpack: nodejs_buildpack
+
+  # --------------------- SERVER MODULE ------------------------
+  - name: investmentCalculator-srv
+  # ------------------------------------------------------------  
+    type: nodejs
+    path: gen/srv
+    requires:
+      - name: investmentCalculator-db
+      - name: investmentCalculator-auth
+      - name: investmentCalculator-destination
+    provides:
+      - name: srv-api
+        properties:
+          srv-url: ${default-url}
+    parameters:
+      buildpack: nodejs_buildpack
+      readiness-health-check-http-endpoint: /health
+      readiness-health-check-type: http
+    build-parameters:
+      builder: npm
+
+  # -------------------- DESTINATION CONTENT--------------------
+  - name: investmentCalculator-destination-content
+  # ------------------------------------------------------------   
+    type: com.sap.application.content
+    requires:
+      - name: srv-api
+      - name: investmentCalculator-destination
+        parameters:
+          content-target: true
+          service-key:
+            name: investmentCalculator-destination-key
+      - name: investmentCalculator-html5-repo-host
+        parameters:
+          service-key:
+            name: investmentCalculator-html5-repo-host-key
+      - name: investmentCalculator-auth
+        parameters:
+          service-key:
+            name: investmentCalculator-auth-key
+    parameters:
+      content:
+        instance:
+          destinations:
+            - Name: investmentCalculator-html5-repo-host
+              ServiceInstanceName: investmentCalculator-html5-repo-host
+              ServiceKeyName: investmentCalculator-html5-repo-host-key
+              sap.cloud.service: investmentCalculator
+            - Authentication: OAuth2UserTokenExchange
+              Name: investmentCalculator_investmentCalculator_auth
+              ServiceInstanceName: investmentCalculator-auth
+              ServiceKeyName: investmentCalculator-auth-key
+              sap.cloud.service: investmentCalculator
+            - Authentication: OAuth2UserTokenExchange
+              Name: investmentCalculator-srv-api
+              TokenServiceInstanceName: investmentCalculator-auth
+              TokenServiceKeyName: investmentCalculator-auth-key
+              URL: ~{srv-api/srv-url}
+              sap.cloud.service: cpapp.service  
+          existing_destinations_policy: update
+    build-parameters:
+      no-source: true
+
+ # ------------------ APPLICATION CONTENT ---------------------
+  - name: investmentCalculator-app-content
+  # ------------------------------------------------------------   
+    type: com.sap.application.content
+    path: .
+    requires:
+      - name: investmentCalculator-html5-repo-host
+        parameters:
+          content-target: true
+    build-parameters:
+      build-result: resources
+      requires:
+        - artifacts:
+            - comsapinvestmanageplans.zip
+          name: comsapinvestmanageplans
+          target-path: resources/
+  - name: comsapinvestmanageplans
+    type: html5
+    path: app/manageplans
+    build-parameters:
+      build-result: dist
+      builder: custom
+      commands:
+        - npm install
+        - npm run build:cf
+      supported-platforms: []
+
+resources:
+  # ------------------------- DB  MODULE ------------------------
+  - name: investmentCalculator-db
+  # ------------------------------------------------------------  
+    type: com.sap.xs.hdi-container
+    parameters:
+      service: hana
+      service-plan: hdi-shared
+    properties:
+      hdi-service-name: ${service-name}
+  # ----------------------- UAA SERVICE ------------------------
+  - name: investmentCalculator-auth
+  # ------------------------------------------------------------   
+    type: org.cloudfoundry.managed-service
+    parameters:
+      config:
+        tenant-mode: dedicated
+        xsappname: investmentCalculator-auth
+      path: ./xs-security.json
+      service: xsuaa
+      service-plan: application
+# -------------------HTML 5 Repo Host-------------------------
+  - name: investmentCalculator-html5-repo-host
+# ------------------------------------------------------------  
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: html5-apps-repo
+      service-plan: app-host
+
+# -------------------- DESTINATION SERVICE -------------------
+  - name: investmentCalculator-destination
+# ------------------------------------------------------------   
+    type: org.cloudfoundry.managed-service
+    parameters:
+      config:
+        HTML5Runtime_enabled: true
+        version: 1.0.0
+      service: destination
+      service-name: investmentCalculator-destination-service
+      service-plan: lite
 parameters:
-  enable-parallel-deployments: true
   deploy_mode: html5-repo
+  enable-parallel-deployments: true
 build-parameters:
   before-all:
     - builder: custom
       commands:
         - npm ci
         - npx cds build --production
-modules:
-  - name: investmentCalculator-srv
-    type: nodejs
-    path: gen/srv
-    parameters:
-      buildpack: nodejs_buildpack
-      readiness-health-check-type: http
-      readiness-health-check-http-endpoint: /health
-    build-parameters:
-      builder: npm
-    provides:
-      - name: srv-api # required by consumers of CAP services (e.g. approuter)
-        properties:
-          srv-url: ${default-url}
-    requires:
-      - name: investmentCalculator-db
-      - name: investmentCalculator-auth
-
-  - name: investmentCalculator-db-deployer
-    type: hdb
-    path: gen/db
-    parameters:
-      buildpack: nodejs_buildpack
-    requires:
-      - name: investmentCalculator-db
-
-
-
-resources:
-  - name: investmentCalculator-db
-    type: com.sap.xs.hdi-container
-    parameters:
-      service: hana
-      service-plan: hdi-shared
-  - name: investmentCalculator-html5-repo-host
-    type: org.cloudfoundry.managed-service
-    parameters:
-      service: html5-apps-repo
-      service-plan: app-host
-  - name: investmentCalculator-auth
-    type: org.cloudfoundry.managed-service
-    parameters:
-      service: xsuaa
-      service-plan: application
-      path: ./xs-security.json
-      config:
-        xsappname: investmentCalculator-auth
-        tenant-mode: dedicated
